@@ -49,6 +49,8 @@ func (u *User) Offline() {
 	u.server.mapLock.Unlock()
 	// 广播用户下线消息
 	u.server.BroadCast(u, "已下线")
+	u.Conn.Close()
+	close(u.C)
 }
 
 // DoMessage 处理消息
@@ -92,7 +94,11 @@ func (u *User) SendMessage(msg string) {
 // ListenMessage 监听当前User channel的方法，一旦有消息，就发送给对应客户端
 func (u *User) ListenMessage() {
 	for {
-		msg := <-u.C
+		msg, ok := <-u.C
+		if !ok {
+			// 用户下线，退出goroutine
+			break
+		}
 		_, err := u.Conn.Write([]byte(msg + "\n"))
 		if err != nil {
 			fmt.Println("send message failed, err: ", err)
