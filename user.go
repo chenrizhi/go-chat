@@ -53,7 +53,26 @@ func (u *User) Offline() {
 
 // DoMessage 处理消息
 func (u *User) DoMessage(msg string) {
-	u.server.BroadCast(u, msg)
+	if msg == "who" {
+		// 查询当前用户列表
+		u.server.mapLock.Lock()
+		for _, user := range u.server.OnlineMap {
+			onlineUsers := "[" + user.Addr + "] " + user.Name + " 在线\n"
+			u.SendMessage(onlineUsers)
+		}
+		u.server.mapLock.Unlock()
+	} else {
+		u.server.BroadCast(u, msg)
+	}
+}
+
+// SendMessage 发送消息
+func (u *User) SendMessage(msg string) {
+	_, err := u.Conn.Write([]byte(msg))
+	if err != nil {
+		fmt.Println("user send message failed, err: ", err)
+		return
+	}
 }
 
 // ListenMessage 监听当前User channel的方法，一旦有消息，就发送给对应客户端
