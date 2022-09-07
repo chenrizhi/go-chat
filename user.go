@@ -61,6 +61,20 @@ func (u *User) DoMessage(msg string) {
 			u.SendMessage(onlineUsers)
 		}
 		u.server.mapLock.Unlock()
+	} else if len(msg) > 7 && msg[:7] == "rename|" {
+		name := msg[7:]
+		// 判断用户名是否存在
+		u.server.mapLock.Lock()
+		if _, ok := u.server.OnlineMap[name]; ok {
+			u.server.mapLock.Unlock()
+			u.SendMessage(fmt.Sprintf("用户名[%s]已存在\n", name))
+		} else {
+			delete(u.server.OnlineMap, u.Name)
+			u.server.OnlineMap[name] = u
+			u.Name = name
+			u.server.mapLock.Unlock()
+			u.SendMessage(fmt.Sprintf("修改用户名[%s]成功\n", name))
+		}
 	} else {
 		u.server.BroadCast(u, msg)
 	}
