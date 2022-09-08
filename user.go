@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"strings"
 )
 
 type User struct {
@@ -76,6 +77,12 @@ func (u *User) DoMessage(msg string) {
 			u.server.mapLock.Unlock()
 			u.SendMessage(fmt.Sprintf("修改用户名[%s]成功\n", name))
 		}
+	} else if len(msg) > 1 && msg[0] == '@' {
+		// 私聊 @username message
+		fields := strings.Fields(msg)
+		toUser := fields[0][1:]
+		sendMsg := fmt.Sprintf("[%s]对你说：%s", u.Name, strings.Join(fields[1:], " "))
+		u.server.OnlineMap[toUser].C <- sendMsg
 	} else {
 		u.server.BroadCast(u, msg)
 	}
