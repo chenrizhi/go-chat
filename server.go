@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 )
 
 type Server struct {
@@ -41,6 +42,9 @@ func (s *Server) Handler(conn net.Conn) {
 	// 用户上线
 	user.Online()
 
+	// 标记用户活跃的channel
+	isAlive := make(chan bool)
+
 	// 接受用户端发送的消息
 	go func() {
 		buf := make([]byte, 1024)
@@ -60,8 +64,26 @@ func (s *Server) Handler(conn net.Conn) {
 			// 提取用户消息，去除\n
 			msg := string(buf)[:n-1]
 			user.DoMessage(msg)
+
+			// 每次用户发送消息，都往channel写入true
+			isAlive <- true
 		}
 	}()
+
+	// 用户长时间不操作下线功能
+	timeout, _ := time.ParseDuration(configData.Server.AliveTimeout)
+	for {
+		select {
+		case <-isAlive:
+		case <-time.After(timeout):
+			user.SendMessage("你长时间不活跃，已被踢下线\n")
+			// 清理资源
+			close(isAlive)
+			close(user.C)
+			user.Conn.Close()
+			return
+		}
+	}
 }
 
 // ListenMessage 监听Message广播消息channel的goroutine，一旦有消息，就发送给全部的在线用户

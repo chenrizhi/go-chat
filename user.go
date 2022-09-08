@@ -47,10 +47,9 @@ func (u *User) Offline() {
 	u.server.mapLock.Lock()
 	delete(u.server.OnlineMap, u.Name)
 	u.server.mapLock.Unlock()
+
 	// 广播用户下线消息
 	u.server.BroadCast(u, "已下线")
-	u.Conn.Close()
-	close(u.C)
 }
 
 // DoMessage 处理消息
